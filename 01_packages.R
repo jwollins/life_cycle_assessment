@@ -4,8 +4,6 @@
 ## 2024-06-24
 ### 01 - Packages required
 
-
-
 ## 01.1 PACKAGES ####
 
 suppressPackageStartupMessages({
