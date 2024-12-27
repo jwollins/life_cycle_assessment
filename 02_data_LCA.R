@@ -297,8 +297,132 @@ write.csv(x = fert_elem_sum, file = "data/processed_data/fert_elem_sum.csv")
 
 
 
+## 06 THESIS SUMMARY TABLES ####
+
+### 06.1 Fert tables ####
+
+fert_thesis <- fert_data[, c("date", "growth_stage", "crop", "treatment", "product", "chem_element", "normalized_rate_kg_ha")]
+
+fert_thesis$normalized_rate_kg_ha <- round(x = fert_thesis$normalized_rate_kg_ha, 2)
+#fert_thesis$rate_unit_ha <- round(x = fert_thesis$rate_unit_ha, 2)
+
+# Modify column names: Capitalize the first letter of each word and remove underscores
+colnames(fert_thesis) <- gsub("_", " ", colnames(fert_thesis))  # Replace underscores with spaces
+colnames(fert_thesis) <- tools::toTitleCase(colnames(fert_thesis))  # Capitalize the first letter of each word
+
+# Display the updated column names
+print(colnames(fert_thesis))
+
+fert_thesis_beans <- subset(fert_thesis, Crop == "Spring beans")
+fert_thesis_wheat <- subset(fert_thesis, Crop == "Winter wheat")
+fert_thesis_y3 <- subset(fert_thesis, Crop == "Spring Barley" | Crop == "Oilseed Rape")
+
+
+
+write.csv(x = fert_thesis_beans, 
+          file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y1_fert_table.csv", 
+          row.names = FALSE)
+
+write.csv(x = fert_thesis_wheat, 
+          file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y2_fert_table.csv", 
+          row.names = FALSE)
+
+write.csv(x = fert_thesis_y3, 
+          file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y3_fert_table.csv", 
+          row.names = FALSE)
 
 
 
 
+### 06.2 Ag Chem tables ####
+
+agchem_thesis <- spray_data[, c("date", "growth_stage", "crop", "treatment", "category", "product", "active_ingredient", "normalized_rate_kg_ha")]
+
+agchem_thesis$normalized_rate_kg_ha <- round(x = agchem_thesis$normalized_rate_kg_ha, 2)
+
+# Modify column names: Capitalize the first letter of each word and remove underscores
+colnames(agchem_thesis) <- gsub("_", " ", colnames(agchem_thesis))  # Replace underscores with spaces
+colnames(agchem_thesis) <- tools::toTitleCase(colnames(agchem_thesis))  # Capitalize the first letter of each word
+
+agchem_thesis_y1 <- subset(agchem_thesis, Crop == "Spring beans")
+agchem_thesis_y2 <- subset(agchem_thesis, Crop == "Winter wheat")
+agchem_thesis_y3 <- subset(agchem_thesis, Crop == "Spring Barley" | Crop == "Oilseed Rape")
+
+agchem_thesis_y1 <- agchem_thesis_y1 %>%
+  arrange(Date)
+
+write.csv(x = agchem_thesis_y1, 
+          file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y1_agchem_table.csv", 
+          row.names = FALSE)
+
+agchem_thesis_y2 <- agchem_thesis_y2 %>%
+  arrange(Date)
+
+write.csv(x = agchem_thesis_y2, 
+          file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y2_agchem_table.csv", 
+          row.names = FALSE)
+
+agchem_thesis_y3 <- agchem_thesis_y3 %>%
+  arrange(Date)
+
+write.csv(x = agchem_thesis_y3, 
+          file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y3_agchem_table.csv", 
+          row.names = FALSE)
+
+
+
+## y1
+
+# Create a LaTeX table
+y1_agchem_table <- agchem_thesis_y1 %>%
+  kbl(format = "latex", 
+      booktabs = TRUE, 
+      caption = "My Table", 
+      label = "MyLabel") %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(y1_agchem_table)
+
+# Save the table to a .tex file
+writeLines(y1_agchem_table, "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y1_agchem_table.tex")
+
+## y2
+
+# Create a LaTeX table
+y2_agchem_table <- agchem_thesis_y2 %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel") %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(y2_agchem_table)
+
+# Save the table to a .tex file
+writeLines(y2_agchem_table, "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y2_agchem_table.tex")
+
+
+## y3
+
+# Create a LaTeX table
+y3_agchem_table <- agchem_thesis_y3 %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel") %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(y3_agchem_table)
+
+# Save the table to a .tex file
+writeLines(y3_agchem_table, "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y2_agchem_table.tex")
 

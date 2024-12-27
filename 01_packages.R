@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
   if (!require(plotrix)) install.packages("plotrix")
   if (!require(lmerTest)) install.packages("lmerTest")
   if (!require(openxlsx)) install.packages("openxlsx")
+  if (!require(kableExtra)) install.packages("kableExtra")
   
   library(dplyr) # for "glimpse" and data manipulation
   library(ggplot2) # general plotting
@@ -26,5 +27,6 @@ suppressPackageStartupMessages({
   library(plotrix) # standard error
   library(lmerTest) # linear mixed effect models
   library(openxlsx) # read xl files 
+  library(kableExtra) # write latex
 })
 
