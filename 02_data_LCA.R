@@ -19,9 +19,11 @@ setwd(dir = "~/OneDrive - Harper Adams University/Data/LCA/")
 file_path <- "data/raw_data/application_data.xlsx"
 all_dat <- read_excel(file_path, sheet = 1)
 
-
-
-
+# Reorder rows based on a factor column levels
+all_dat$year <- factor(all_dat$year, levels = c("2022", "2023", "2024"))
+# Reorder rows based on a factor column levels
+all_dat$crop <- factor(all_dat$crop, levels = c("Spring beans", "Winter wheat", "Oilseed Rape", "Spring Barley"))
+all_dat$treatment <- factor(all_dat$treatment, levels = c("Conservation", "Conventional"))
 
 ## 03 FUNCTIONS ####
 
@@ -48,9 +50,6 @@ fert_filter <- function(df) {
 
 
 summarize_data <- function(file_path) {
-  # Load required library
-  library(dplyr)
-  
   # Read the CSV file
   data <- read.csv(file_path)
   
@@ -69,8 +68,6 @@ summarize_data <- function(file_path) {
 
 
 summarize_fert_data <- function(file_path) {
-  # Load required library
-  library(dplyr)
   
   # Read the CSV file
   data <- read.csv(file_path)
@@ -107,7 +104,7 @@ summarize_csv <- function(file_path) {
   
   # Group by 'treatment' and 'crop' and calculate the sum of 'normalized_rate_kg_ha'
   summary_df <- df %>%
-    group_by(treatment, crop) %>%
+    group_by(treatment, year) %>%
     summarise(Total_Active_Ingredient_kg_ha = sum(normalized_rate_kg_ha, na.rm = TRUE), .groups = 'drop')
   
   return(summary_df)
@@ -165,6 +162,8 @@ summarize_fert_elements <- function(file_path) {
 ## 04 CALCULATIONS ####
 
 data <- all_dat
+
+
 
 
 # Convert relevant columns to numeric, coercing non-numeric values to NA
@@ -268,30 +267,126 @@ write.xlsx(spray_data, output_file_path)
 ## 05 GENERATE A SUMMARY TABLE ####
 
 
+
+
 ### spray summary ####
+
 # use the summarize fucntion made earlier...
 summary <- summarize_data("data/processed_data/normalized_application_data.csv")
+# Reorder rows based on a factor column levels
+summary$crop <- factor(summary$crop, levels = c("Spring Beans", "Winter Wheat", "Oilseed Rape", "Spring Barley"))
+summary <- summary[order(summary$crop), ]
+
+# Round all columns to 2 decimal places
+summary[] <- lapply(summary, function(x) if(is.numeric(x)) round(x, 2) else x)
 # save the summary
-write.csv(x = summary, file = "data/processed_data/summary_normalised_LCA_data.csv")
+write.csv(x = summary, file = "data/processed_data/summary_normalised_LCA_data.csv", row.names = FALSE)
+
 
 ### fert summary ####
+
 fert_summary <- summarize_fert_data("data/processed_data/normalised_fert_data.csv")
+# Round all columns to 2 decimal places
+fert_summary[] <- lapply(fert_summary, function(x) if(is.numeric(x)) round(x, 2) else x)
 # save the summary
-write.csv(x = fert_summary, file = "data/processed_data/fert_summary_normalised_LCA_data.csv")
+write.csv(x = fert_summary, file = "data/processed_data/fert_summary_normalised_LCA_data.csv", row.names = FALSE)
 
 
 ### total AI summary ####
+
 total_ai_summary <- summarize_csv("data/processed_data/normalized_application_data.csv")
+# Round all columns to 2 decimal places
+total_ai_summary[] <- lapply(total_ai_summary, function(x) if(is.numeric(x)) round(x, 2) else x)
 # print(summary)
 write_csv(x = total_ai_summary, file = "data/processed_data/AI_kg_ha_data.csv")
 
+print(total_ai_summary)
+
+# Create a LaTeX table
+ai_table <- total_ai_summary %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel", digits = 2) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(ai_table)
+
+
+# Calculate percentage difference between treatments for each crop
+percentage_difference <- total_ai_summary %>%
+  group_by(year) %>%
+  summarise(
+    Conservation = Total_Active_Ingredient_kg_ha[treatment == "Conservation"],
+    Conventional = Total_Active_Ingredient_kg_ha[treatment == "Conventional"],
+    Percentage_Difference = ((Conventional - Conservation) / Conservation) * 100
+  )
+
+# Print the results
+print(percentage_difference)
+
+# Create a LaTeX table
+ai_table <- percentage_difference %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel", digits = 2) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(ai_table)
+
+
+
+
+
 ### AI category summary ####
+
 ai_cat_sum <- summarize_sprays(file_path = "data/processed_data/normalized_application_data.csv")
-write.csv(x = ai_cat_sum, file = "data/processed_data/AI_category_summary.csv")
+ai_cat_sum$year <- factor(ai_cat_sum$year, levels = c("2022", "2023", "2024"))
+ai_cat_sum <- ai_cat_sum[order(ai_cat_sum$year), ]
+# Round all columns to 2 decimal places
+ai_cat_sum[] <- lapply(ai_cat_sum, function(x) if(is.numeric(x)) round(x, 2) else x)
+write.csv(x = ai_cat_sum, file = "data/processed_data/AI_category_summary.csv", row.names = FALSE)
+
+glimpse(ai_cat_sum)
+
+# Create a LaTeX table
+ai_table <- ai_cat_sum %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel", digits = 2) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(ai_table)
+
+# Calculate percentage difference for each crop and category
+percentage_difference_by_category <- ai_cat_sum %>%
+  group_by(category, year) %>%
+  summarise(
+    Conservation = Total_Active_Ingredient_kg_ha[treatment == "Conservation"],
+    Conventional = Total_Active_Ingredient_kg_ha[treatment == "Conventional"],
+    Percentage_Difference = round((((Conventional*1000) - (Conservation*1000)) / (Conservation*1000)) * 100, digits = 2)
+  ) %>%
+  ungroup()  # Ungroup to ensure no grouping remains in the output
+
+# Print the results
+print(percentage_difference_by_category)
+
+
 
 ### Fert element summary ####
+
 fert_elem_sum <- summarize_fert_elements(file_path = "data/processed_data/normalised_fert_data.csv")
-write.csv(x = fert_elem_sum, file = "data/processed_data/fert_elem_sum.csv")
+# Round all columns to 2 decimal places
+fert_elem_sum[] <- lapply(fert_elem_sum, function(x) if(is.numeric(x)) round(x, 2) else x)
+write.csv(x = fert_elem_sum, file = "data/processed_data/fert_elem_sum.csv", row.names = FALSE)
 
 
 
