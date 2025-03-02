@@ -17,6 +17,8 @@ suppressPackageStartupMessages({
   if (!require(lmerTest)) install.packages("lmerTest")
   if (!require(openxlsx)) install.packages("openxlsx")
   if (!require(kableExtra)) install.packages("kableExtra")
+  if (!require(kableExtra)) install.packages("emmeans")
+  if (!require(kableExtra)) install.packages("lme4")
   
   library(dplyr) # for "glimpse" and data manipulation
   library(ggplot2) # general plotting
@@ -28,5 +30,9 @@ suppressPackageStartupMessages({
   library(lmerTest) # linear mixed effect models
   library(openxlsx) # read xl files 
   library(kableExtra) # write latex
+  library(emmeans) # posthoc comp
+  library(lme4)
 })
+
+
 

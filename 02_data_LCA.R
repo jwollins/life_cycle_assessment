@@ -4,7 +4,7 @@
 ## 2024-06-24
 ### 02 - Data
 
-setwd(dir = "~/Documents/GitHub/lca/")
+# setwd(dir = "~/Documents/GitHub/lca/")
 
 ## 01 PACKAGES ####
 source(file = "01_packages.R")
@@ -16,7 +16,7 @@ source(file = "01_packages.R")
 setwd(dir = "~/OneDrive - Harper Adams University/Data/LCA/")
 
 # Load the data
-file_path <- "data/raw_data/application_data.xlsx"
+file_path <- "data/raw_data/all_application_data.xlsx"
 all_dat <- read_excel(file_path, sheet = 1)
 
 # Reorder rows based on a factor column levels
@@ -25,7 +25,12 @@ all_dat$year <- factor(all_dat$year, levels = c("2022", "2023", "2024"))
 all_dat$crop <- factor(all_dat$crop, levels = c("Spring beans", "Winter wheat", "Oilseed Rape", "Spring Barley"))
 all_dat$treatment <- factor(all_dat$treatment, levels = c("Conservation", "Conventional"))
 
+
 ## 03 FUNCTIONS ####
+
+print(all_dat$category)
+
+all_dat <- filter(all_dat, category != "Miscellaneous")
 
 
 # remove the fertilser rows of the df
@@ -74,12 +79,12 @@ summarize_fert_data <- function(file_path) {
   
   # Group by treatment, crop, and active ingredient
   summary <- data %>%
-    group_by(treatment, crop, chem_element) %>%
+    group_by(treatment, year, chem_element) %>%
     summarise(
-      avg_normalized_rate_kg_ha = mean(normalized_rate_kg_ha, na.rm = TRUE),
+      #avg_normalized_rate_kg_ha = mean(normalized_rate_kg_ha, na.rm = TRUE),
       sum_normalized_rate_kg_ha = sum(normalized_rate_kg_ha, na.rm = TRUE),
-      avg_price_per_hectare = mean(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE),
-      sum_price_per_hectare = sum(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE)
+      #avg_price_per_hectare = mean(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE),
+      #sum_price_per_hectare = sum(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE)
     )
   
   return(summary)
@@ -274,13 +279,16 @@ write.xlsx(spray_data, output_file_path)
 # use the summarize fucntion made earlier...
 summary <- summarize_data("data/processed_data/normalized_application_data.csv")
 # Reorder rows based on a factor column levels
-summary$crop <- factor(summary$crop, levels = c("Spring Beans", "Winter Wheat", "Oilseed Rape", "Spring Barley"))
+summary$crop <- factor(summary$crop, levels = c("Spring beans", "Winter wheat", "Oilseed Rape", "Spring Barley"))
 summary <- summary[order(summary$crop), ]
 
 # Round all columns to 2 decimal places
 summary[] <- lapply(summary, function(x) if(is.numeric(x)) round(x, 2) else x)
 # save the summary
 write.csv(x = summary, file = "data/processed_data/summary_normalised_LCA_data.csv", row.names = FALSE)
+
+
+
 
 
 ### fert summary ####
@@ -290,6 +298,99 @@ fert_summary <- summarize_fert_data("data/processed_data/normalised_fert_data.cs
 fert_summary[] <- lapply(fert_summary, function(x) if(is.numeric(x)) round(x, 2) else x)
 # save the summary
 write.csv(x = fert_summary, file = "data/processed_data/fert_summary_normalised_LCA_data.csv", row.names = FALSE)
+
+# complete missing entries
+library(tidyr)
+
+colnames(fert_summary)
+
+
+# Create a complete set of combinations for treatment, year, and category
+expanded_data <- expand_grid(
+  treatment = unique(fert_summary$treatment),
+  year = unique(fert_summary$year),
+  chem_element = unique(fert_summary$chem_element)
+)
+
+# Join the complete combinations with the existing data
+fert_sum_complete <- expanded_data %>%
+  left_join(fert_summary, by = c("treatment", "year", "chem_element")) %>%
+  mutate(
+    sum_normalized_rate_kg_ha = replace_na(sum_normalized_rate_kg_ha, 0) # Replace NAs with 0
+  )
+
+# Print the updated dataset
+print(fert_sum_complete)
+
+
+
+# Calculate percentage difference between treatments for each crop
+percentage_difference <- fert_sum_complete %>%
+  group_by(chem_element,year) %>%
+  summarise(
+    Conservation = sum_normalized_rate_kg_ha[treatment == "Conservation"],
+    Conventional = sum_normalized_rate_kg_ha[treatment == "Conventional"],
+    Percentage_Difference = round(((Conventional - Conservation) / Conservation) * 100, digits = 2)
+  )
+
+
+
+# Create a LaTeX table
+fert_table <- percentage_difference %>%
+  kbl(format = "latex", 
+      booktabs = TRUE, 
+      caption = "My Table", 
+      label = "MyLabel", 
+      digits = 2) %>%
+  kable_styling(
+    latex_options = c("hold_position"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 10                    # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(fert_table)
+
+
+
+# Summarise the table by treatment and category across all years
+total_by_category <- percentage_difference %>%
+  group_by(chem_element) %>%
+  summarise(
+    Conservation = sum(Conservation, na.rm = TRUE),
+    Conventional = sum(Conventional, na.rm = TRUE),
+    Percentage_Difference = case_when(
+      Conservation == 0 & Conventional == 0 ~ NA_real_,  # No data
+      Conservation == 0 ~ Inf,  # Infinite percentage difference
+      TRUE ~ round(((Conventional - Conservation) / Conservation) * 100, 2)
+    )
+  ) %>%
+  ungroup()
+
+
+print(total_by_category)
+
+
+
+# Create a LaTeX table
+fert_table <- total_by_category %>%
+  kbl(format = "latex", 
+      booktabs = TRUE, 
+      caption = "My Table", 
+      label = "MyLabel", 
+      digits = 2) %>%
+  kable_styling(
+    latex_options = c("hold_position"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 10                    # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(fert_table)
+
+
+
+
 
 
 ### total AI summary ####
@@ -354,20 +455,31 @@ write.csv(x = ai_cat_sum, file = "data/processed_data/AI_category_summary.csv", 
 
 glimpse(ai_cat_sum)
 
-# Create a LaTeX table
-ai_table <- ai_cat_sum %>%
-  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel", digits = 2) %>%
-  kable_styling(
-    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
-    full_width = FALSE,                 # Set to FALSE for `tabular`
-    font_size = 15                     # Adjust font size for readability
-  ) %>%
-  row_spec(0, bold = TRUE)
 
-print(ai_table)
+# complete missing entries
+library(tidyr)
+
+# Create a complete set of combinations for treatment, year, and category
+expanded_data <- expand_grid(
+  treatment = unique(ai_cat_sum$treatment),
+  year = unique(ai_cat_sum$year),
+  category = unique(ai_cat_sum$category)
+)
+
+# Join the complete combinations with the existing data
+ai_cat_sum_complete <- expanded_data %>%
+  left_join(ai_cat_sum, by = c("treatment", "year", "category")) %>%
+  mutate(
+    Total_Active_Ingredient_kg_ha = replace_na(Total_Active_Ingredient_kg_ha, 0) # Replace NAs with 0
+  )
+
+# Print the updated dataset
+print(ai_cat_sum_complete)
+
+
 
 # Calculate percentage difference for each crop and category
-percentage_difference_by_category <- ai_cat_sum %>%
+percentage_difference_by_category <- ai_cat_sum_complete %>%
   group_by(category, year) %>%
   summarise(
     Conservation = Total_Active_Ingredient_kg_ha[treatment == "Conservation"],
@@ -378,6 +490,52 @@ percentage_difference_by_category <- ai_cat_sum %>%
 
 # Print the results
 print(percentage_difference_by_category)
+
+# Create a LaTeX table
+ai_table <- percentage_difference_by_category %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel", digits = 2) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(ai_table)
+
+
+
+
+## summarise by treatment and category but not year 
+
+# Summarise the table by treatment and category across all years
+total_by_category <- percentage_difference_by_category %>%
+  group_by(category) %>%
+  summarise(
+    Conservation = sum(Conservation, na.rm = TRUE),
+    Conventional = sum(Conventional, na.rm = TRUE),
+    Percentage_Difference = case_when(
+      Conservation == 0 & Conventional == 0 ~ NA_real_,  # No data
+      Conservation == 0 ~ Inf,  # Infinite percentage difference
+      TRUE ~ round(((Conventional - Conservation) / Conservation) * 100, 2)
+    )
+  ) %>%
+  ungroup()
+
+# Print the summarized table
+print(total_by_category)
+
+# Create a LaTeX table
+ai_table <- total_by_category %>%
+  kbl(format = "latex", booktabs = TRUE, caption = "My Table", label = "MyLabel", digits = 2, ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 10                    # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(ai_table)
 
 
 
@@ -408,23 +566,75 @@ colnames(fert_thesis) <- tools::toTitleCase(colnames(fert_thesis))  # Capitalize
 # Display the updated column names
 print(colnames(fert_thesis))
 
-fert_thesis_beans <- subset(fert_thesis, Crop == "Spring beans")
-fert_thesis_wheat <- subset(fert_thesis, Crop == "Winter wheat")
+fert_thesis_y1 <- subset(fert_thesis, Crop == "Spring beans")
+fert_thesis_y2 <- subset(fert_thesis, Crop == "Winter wheat")
 fert_thesis_y3 <- subset(fert_thesis, Crop == "Spring Barley" | Crop == "Oilseed Rape")
 
 
 
-write.csv(x = fert_thesis_beans, 
+write.csv(x = fert_thesis_y1, 
           file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y1_fert_table.csv", 
           row.names = FALSE)
 
-write.csv(x = fert_thesis_wheat, 
+write.csv(x = fert_thesis_y2, 
           file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y2_fert_table.csv", 
           row.names = FALSE)
 
 write.csv(x = fert_thesis_y3, 
           file = "~/OneDrive - Harper Adams University/Thesis/Overleaf_thesis/thesis_tables/y3_fert_table.csv", 
           row.names = FALSE)
+
+
+## y1
+
+# Create a LaTeX table
+fert_thesis_y1 <- fert_thesis_y1 %>%
+  kbl(format = "latex", 
+      booktabs = TRUE, 
+      caption = "My Table", 
+      label = "MyLabel") %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(fert_thesis_y1)
+
+## y2
+
+# Create a LaTeX table
+fert_thesis_y2 <- fert_thesis_y2 %>%
+  kbl(format = "latex", 
+      booktabs = TRUE, 
+      caption = "My Table", 
+      label = "MyLabel") %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(fert_thesis_y2)
+
+## y3
+
+# Create a LaTeX table
+fert_thesis_y3 <- fert_thesis_y3 %>%
+  kbl(format = "latex", 
+      booktabs = TRUE, 
+      caption = "My Table", 
+      label = "MyLabel") %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"), # Avoid 'tabu'
+    full_width = FALSE,                 # Set to FALSE for `tabular`
+    font_size = 15                     # Adjust font size for readability
+  ) %>%
+  row_spec(0, bold = TRUE)
+
+print(fert_thesis_y3)
 
 
 
