@@ -4,19 +4,26 @@
 ## 2024-06-24
 ### 02 - Data
 
-# setwd(dir = "~/Documents/GitHub/lca/")
 
-## 01 PACKAGES ####
+
+
+
+#________________________________________________________________________####
+# PACKAGES ####
 source(file = "01_packages.R")
 
 
+library(tidyr)
 
-## 02 Data ####
 
-setwd(dir = "~/OneDrive - Harper Adams University/Data/LCA/")
+
+#________________________________________________________________________####
+# Data ####
+
 
 # Load the data
-file_path <- "data/raw_data/all_application_data.xlsx"
+
+file_path <- "sym_link_lca/data/raw_data/all_application_data.xlsx"
 all_dat <- read_excel(file_path, sheet = 1)
 
 # Reorder rows based on a factor column levels
@@ -26,7 +33,12 @@ all_dat$crop <- factor(all_dat$crop, levels = c("Spring beans", "Winter wheat", 
 all_dat$treatment <- factor(all_dat$treatment, levels = c("Conservation", "Conventional"))
 
 
-## 03 FUNCTIONS ####
+
+
+
+
+#________________________________________________________________________####
+# FUNCTIONS ####
 
 print(all_dat$category)
 
@@ -65,7 +77,8 @@ summarize_data <- function(file_path) {
       avg_normalized_rate_kg_ha = mean(normalized_rate_kg_ha, na.rm = TRUE),
       sum_normalized_rate_kg_ha = sum(normalized_rate_kg_ha, na.rm = TRUE),
       avg_price_per_hectare = mean(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE),
-      sum_price_per_hectare = sum(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE)
+      sum_price_per_hectare = sum(price_per_hectare_based_on_normalized_g_ha, na.rm = TRUE),
+      category = category
     )
   
   return(summary)
@@ -164,11 +177,27 @@ summarize_fert_elements <- function(file_path) {
 }
 
 
-## 04 CALCULATIONS ####
+
+
+
+
+
+
+
+
+
+
+
+#________________________________________________________________________####
+# CALCULATIONS ####
 
 data <- all_dat
 
 
+
+
+
+# ~ Formulations ####
 
 
 # Convert relevant columns to numeric, coercing non-numeric values to NA
@@ -182,6 +211,7 @@ suppressWarnings(data <- data %>%
 
 #rename column by name
 colnames(data)[colnames(data) == 'forumulation'] <- 'formulation'
+
 
 # Correct rows with unexpected combinations based on known context
 data <- data %>%
@@ -200,6 +230,11 @@ data <- data %>%
   )
 
 
+
+
+
+
+# ~ normalise the rates ####
 
 # Normalize the rates to kg/ha using vectorized operations
 data <- data %>%
@@ -234,6 +269,10 @@ data <- data %>%
 
 
 
+
+
+# ~ price per ha ####
+
 # Calculate the price per hectare
 data <- data %>%
   mutate(
@@ -250,57 +289,92 @@ data <- data %>%
 
 
 
-### Filter data ####
+
+
+
+
+
+
+
+#________________________________________________________________________####
+# Filter data ####
+
 
 # run functions
 fert_data <- fert_filter(data)
 spray_data <- remove_fertiliser_rows(data)
 
-# save processed data sets
-write.csv(x = spray_data, file = "data/processed_data/normalized_application_data.csv")
-write.csv(x = fert_data, file = "data/processed_data/normalised_fert_data.csv")
-write.csv(x = data, file = "data/processed_data/normalised_spray_fert_data.csv")
+
+
+# ~ save processed data ####
+write.csv(x = spray_data, file = "sym_link_lca/data/processed_data/normalized_application_data.csv")
+
+write.csv(x = fert_data, file = "sym_link_lca/data/processed_data/normalised_fert_data.csv")
+
+write.csv(x = data, file = "sym_link_lca/data/processed_data/normalised_spray_fert_data.csv")
+
+
 
 # Save the updated data to a new Excel file
-output_file_path <- "data/processed_data/normalized_application_data.xlsx"
+output_file_path <- "sym_link_lca/data/processed_data/normalized_application_data.xlsx"
+
 write.xlsx(spray_data, output_file_path)
 
 
 
 
 
-## 05 GENERATE A SUMMARY TABLE ####
 
 
 
 
-### spray summary ####
+
+#________________________________________________________________________####
+# GENERATE A SUMMARY TABLE ####
+
+
+
+
+test <- read.csv(file = "sym_link_lca/data/processed_data/normalized_application_data.csv")
+
+
+
+
+
+# ~ spray summary ####
 
 # use the summarize fucntion made earlier...
-summary <- summarize_data("data/processed_data/normalized_application_data.csv")
+summary <- summarize_data("sym_link_lca/data/processed_data/normalized_application_data.csv")
+
 # Reorder rows based on a factor column levels
 summary$crop <- factor(summary$crop, levels = c("Spring beans", "Winter wheat", "Oilseed Rape", "Spring Barley"))
+
 summary <- summary[order(summary$crop), ]
 
-# Round all columns to 2 decimal places
-summary[] <- lapply(summary, function(x) if(is.numeric(x)) round(x, 2) else x)
+# Round all columns to 4 decimal places
+summary[] <- lapply(summary, function(x) if(is.numeric(x)) round(x, 4) else x)
+
 # save the summary
-write.csv(x = summary, file = "data/processed_data/summary_normalised_LCA_data.csv", row.names = FALSE)
+write.csv(x = summary, file = "sym_link_lca/data/processed_data/summary_normalised_LCA_data.csv", row.names = FALSE)
 
 
 
 
 
-### fert summary ####
 
-fert_summary <- summarize_fert_data("data/processed_data/normalised_fert_data.csv")
+
+# ~ fert summary ####
+
+fert_summary <- summarize_fert_data("sym_link_lca/data/processed_data/normalised_fert_data.csv")
+
 # Round all columns to 2 decimal places
-fert_summary[] <- lapply(fert_summary, function(x) if(is.numeric(x)) round(x, 2) else x)
+fert_summary[] <- lapply(fert_summary, function(x) if(is.numeric(x)) round(x, 4) else x)
+
 # save the summary
-write.csv(x = fert_summary, file = "data/processed_data/fert_summary_normalised_LCA_data.csv", row.names = FALSE)
+write.csv(x = fert_summary, file = "sym_link_lca/data/processed_data/fert_summary_normalised_LCA_data.csv", row.names = FALSE)
 
 # complete missing entries
-library(tidyr)
+
 
 colnames(fert_summary)
 
@@ -353,6 +427,10 @@ print(fert_table)
 
 
 
+
+
+## ~~ by treatment ####
+
 # Summarise the table by treatment and category across all years
 total_by_category <- percentage_difference %>%
   group_by(chem_element) %>%
@@ -393,11 +471,17 @@ print(fert_table)
 
 
 
-### total AI summary ####
+
+
+
+
+# ~ total AI summary ####
 
 total_ai_summary <- summarize_csv("data/processed_data/normalized_application_data.csv")
+
 # Round all columns to 2 decimal places
-total_ai_summary[] <- lapply(total_ai_summary, function(x) if(is.numeric(x)) round(x, 2) else x)
+total_ai_summary[] <- lapply(total_ai_summary, function(x) if(is.numeric(x)) round(x, 4) else x)
+
 # print(summary)
 write_csv(x = total_ai_summary, file = "data/processed_data/AI_kg_ha_data.csv")
 
@@ -444,13 +528,15 @@ print(ai_table)
 
 
 
-### AI category summary ####
+
+
+# ~ AI category summary ####
 
 ai_cat_sum <- summarize_sprays(file_path = "data/processed_data/normalized_application_data.csv")
 ai_cat_sum$year <- factor(ai_cat_sum$year, levels = c("2022", "2023", "2024"))
 ai_cat_sum <- ai_cat_sum[order(ai_cat_sum$year), ]
 # Round all columns to 2 decimal places
-ai_cat_sum[] <- lapply(ai_cat_sum, function(x) if(is.numeric(x)) round(x, 2) else x)
+ai_cat_sum[] <- lapply(ai_cat_sum, function(x) if(is.numeric(x)) round(x, 4) else x)
 write.csv(x = ai_cat_sum, file = "data/processed_data/AI_category_summary.csv", row.names = FALSE)
 
 glimpse(ai_cat_sum)
@@ -539,20 +625,29 @@ print(ai_table)
 
 
 
-### Fert element summary ####
+# ~ Fert element summary ####
 
 fert_elem_sum <- summarize_fert_elements(file_path = "data/processed_data/normalised_fert_data.csv")
 # Round all columns to 2 decimal places
-fert_elem_sum[] <- lapply(fert_elem_sum, function(x) if(is.numeric(x)) round(x, 2) else x)
+fert_elem_sum[] <- lapply(fert_elem_sum, function(x) if(is.numeric(x)) round(x, 4) else x)
 write.csv(x = fert_elem_sum, file = "data/processed_data/fert_elem_sum.csv", row.names = FALSE)
 
 
 
 
 
-## 06 THESIS SUMMARY TABLES ####
 
-### 06.1 Fert tables ####
+
+
+
+#________________________________________________________________####
+# THESIS SUMMARY TABLES ####
+
+
+
+
+
+# ~ Fert tables ####
 
 fert_thesis <- fert_data[, c("date", "growth_stage", "crop", "treatment", "product", "chem_element", "normalized_rate_kg_ha")]
 
@@ -639,7 +734,9 @@ print(fert_thesis_y3)
 
 
 
-### 06.2 Ag Chem tables ####
+
+
+# ~ Ag Chem tables ####
 
 agchem_thesis <- spray_data[, c("date", "growth_stage", "crop", "treatment", "category", "product", "active_ingredient", "normalized_rate_kg_ha")]
 
